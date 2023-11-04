@@ -13,9 +13,13 @@ spring:
     virtual-host: /
     #做消息可靠性
     publisher-confirm-type: correlated
-    publisher-returns: true
     template:
       mandatory: true
+    listener:
+      simple:
+        retry:
+          enabled: true
+          max-attempts: 3 # 最大重试次数
 
   application:
     name: keyuan

@@ -52,6 +52,9 @@ import static com.keyuan.utils.RedisContent.CACHE_ORDERNAME;
 import static com.keyuan.utils.RedisContent.LOCKKEY;
 
 /**
+ * 逻辑问题很大建议重写
+ *
+ *
  * 消息队列思路:
  * 首先需要定义一个正常队列和一个正常交换机  死信队列和死信交换机 只有一个消费者消费,第二个消费者应当是另一个功能
  * 当时间超过了20分钟,则将正常队列的消息转移到死信队列
@@ -87,6 +90,7 @@ import static com.keyuan.utils.RedisContent.LOCKKEY;
  * @author:Administrator
  * @date:2023/5/18 0:44
  * @Description
+ *
  */
 @Service
 @Slf4j
@@ -297,13 +301,16 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
                     synchronized (order.getOrderId()) { //这里应该最好要加个锁
                         //这里表示状态是300 并且没有过期的话
                         //改状态
-                        orderMapper.updateStatusById(order.getOrderId(), 400);
+                        int result = orderMapper.updateStatusById(order.getOrderId(), 400);
                         //改销量
-                        goodService.updateSoleNumByIds(order.getGoodId(), order.getShopId());
-                        //发消息
-                        rabbitTemplate.convertAndSend(EXCHANGE_NAME,"order.normal", message, correlationData);
-                        log.info("修改状态,销量成功,发送消息成功");
-                        return Result.ok("订单确认成功!");
+                        result += goodService.updateSoleNumByIds(order.getGoodId(), order.getShopId());
+                        if (result == 2){
+                            //发消息
+                            rabbitTemplate.convertAndSend(EXCHANGE_NAME,"order.normal", message, correlationData);
+                            log.info("修改状态,销量成功,发送消息成功");
+                            return Result.ok("订单确认成功!");
+                        }
+                        return Result.fail("订单错误!");
                     }
                 }
                 stringRedisTemplate.opsForHash().put(RedisContent.CACHE_ORDERNAME + user.getId(),  String.valueOf(order.getOrderId()), JSONUtil.toJsonStr(cacheOrder.setOrderStatus(333)));

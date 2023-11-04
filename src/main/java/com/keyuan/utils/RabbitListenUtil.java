@@ -54,10 +54,10 @@ public class RabbitListenUtil {
      * @param message
      * @param
      */
-        @RabbitListener(queues = RabbitContent.ERRORQUEUE_NAME)
-        public void receiveDeadError(Message message){
-            log.info("接收到错误队列的消息:{}", new String(message.getBody()));
-        }
+    @RabbitListener(queues = RabbitContent.ERRORQUEUE_NAME)
+    public void receiveDeadError(Message message){
+        log.info("接收到错误队列的消息:{},错误异常信息:{}", new String(message.getBody()),message.getMessageProperties().toString());
+    }
 
     @RabbitListener(queues = RabbitContent.DEADQUEUE_NAME)
     public void receiveDead(String message) {
@@ -69,17 +69,20 @@ public class RabbitListenUtil {
         stringRedisTemplate.opsForHash().put(CACHE_ORDERNAME+order.getUserId(),String.valueOf(order.getOrderId()), JSONUtil.toJsonStr(order));
 
     }
+
     @RabbitListener(queues = RabbitContent.QUEUE_NAME)
     public void receiveNormal(String message){
             log.info("接收到普通队列的消息:{}",message);
             //接收到普通队列的消息,将缓存状态修改,然后发webSocket给前端
-
-        Order order = JSONUtil.toBean(message, Order.class);
+        log.debug("测试数据:{}",message);
+        Long orderId = Long.valueOf(message);
+        Order order = orderMapper.selectOrderById(orderId);
         order.setOrderStatus(400);
         String orderJson= JSONUtil.toJsonStr(order);
         //这里接收到死信队列后直接将缓存状态修改
         stringRedisTemplate.opsForHash().put(CACHE_ORDERNAME+order.getUserId(),String.valueOf(order.getOrderId()),JSONUtil.toJsonStr(orderJson));
-        webSocketServerUtil.sendMessage(orderJson);
+        //TODO:POSTMAN测试下这里不能用webSocket,因为Session不存在
+        //webSocketServerUtil.sendMessage(orderJson);
     }
 
 

@@ -27,7 +27,7 @@ public class Result {
     }
 
     public static Result ok(Integer code,Object data){
-        return new Result(code, true,null,null,null);
+        return new Result(code, true,null,data,null);
     }
     /**
      * 返回多个数据
