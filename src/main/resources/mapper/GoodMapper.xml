@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.keyuan.mapper.GoodMapper">
+
+    <resultMap id="searchGoods" type="Good">
+        <id column="id" property="id"/>
+        <result column="food_name" property="foodName"/>
+        <result column="food_price" property="foodPrice"/>
+        <result column="food_type" property="foodType"/>
+        <result column="snake_id" property="snakeId"/>
+        <result column="hasScale" property="hasScale"/>
+        <result column="flavor" property="flavor"/>
+        <result column="optional_name" property="optionalName"/>
+        <result column="soleNum" property="soleNum"/>
+        <result column="image" property="image"/>
+        <result column="shop_id" property="shopId"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="end_time" property="endTime"/>
+        <result column="is_delete" property="isDeleted"/>
+    </resultMap>
+
+    <select id="selectAll" resultType="Good" resultMap="searchGoods">
+        select id,food_name,food_price,food_type,snake_id,hasScale,flavor,optional_name,soleNum,image,shop_id,update_time from t_good
+        where is_delete = 0
+    </select>
+
+    <select id="selectSoleNum" resultType="Rank">
+        select  id ,soleNum from t_good where  shop_id =#{shopId} and is_delete = 0
+    </select>
+
+    <insert id="insertGood" useGeneratedKeys="true" keyProperty="good.id">
+        insert into t_good(id,food_name,food_price,food_type,snake_id,hasScale,optional_name,flavor,soleNum,shop_id,update_time,image)
+        values(null,
+        #{good.foodName},
+        #{good.foodPrice},
+        #{good.foodType},
+        (
+        select GROUP_CONCAT(snake_id SEPARATOR ',') as snake_id from good_snake where snake_name in
+        <foreach collection="snakeList" item="snakeId" separator="," open="(" close=")">
+            #{snakeId}
+        </foreach>
+        ),
+        #{good.hasScale},
+        #{good.optionalName},
+        #{good.flavor},
+        #{good.soleNum},
+        #{good.shopId},
+        #{good.updateTime},
+        #{good.image})
+    </insert>
+    <!--改订单销量-->
+    <update id="updateSoleNumByIds">
+        update t_good set soleNum = soleNum + 1
+        <where>
+            id in
+            <foreach collection="ids" separator="," item="id" open="(" close=")">
+                #{id}
+            </foreach>
+        </where>
+
+    </update>
+
+    <!--根据id找前五的id-->
+    <select id="selectListByIds" resultType="com.keyuan.entity.Good">
+        select id,food_name,food_price,food_type,snake_id,hasScale,flavor,optional_name,soleNum,image,shop_id,update_time,end_time from t_good
+        <where>
+             id in
+                <foreach collection="ids" open="(" separator="," item="id" close=")">
+                    #{id}
+                </foreach>
+            order by
+                Field(id,
+                <foreach collection="ids"  separator="," item="id" >
+                #{id}
+                </foreach>
+            )
+        </where>
+    </select>
+    <select id="selectGoodByName" resultType="com.keyuan.entity.Good">
+        select id,food_name,food_price,food_type,snake_id,hasScale,flavor,optional_name,soleNum,image,shop_id,update_time,end_time from t_good
+        <where>
+            food_name = #{foodName} and is_delete = 0
+        </where>
+
+    </select>
+    <select id="selectIdByName" resultType="java.lang.Long">
+        select id from t_good where name = #{foodName} and is_delete = 0
+    </select>
+    <select id="selectAllType" resultType="java.lang.String">
+        SELECT food_type FROM t_good group by food_type
+    </select>
+
+    <update id="updateDeleteById">
+        update t_good set is_delete=1,end_time=#{endTime} where id = #{id} and is_delete=0
+    </update>
+</mapper>
